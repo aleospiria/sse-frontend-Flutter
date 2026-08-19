@@ -7,6 +7,7 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: App()),
     );
-    expect(find.text('Login - Placeholder'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Iniciar sesion'), findsOneWidget);
   });
 }
