@@ -5,8 +5,8 @@ import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/services/api_client.dart';
 
 class AuthService {
-  ApiClient? _apiClient;
   final FlutterSecureStorage _storage;
+  ApiClient? _apiClient;
 
   static const _tokenKey = 'sse_token';
   static const _userKey = 'sse_user';
@@ -14,12 +14,8 @@ class AuthService {
   AuthService({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  void setApiClient(ApiClient client) {
-    _apiClient = client;
-  }
-
   ApiClient get client {
-    assert(_apiClient != null, 'ApiClient not set. Call setApiClient first.');
+    _apiClient ??= ApiClient(tokenGetter: () => getToken());
     return _apiClient!;
   }
 

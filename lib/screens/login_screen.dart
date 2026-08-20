@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sse_frontend_mobil/services/api_client.dart';
 import 'package:sse_frontend_mobil/services/auth_service.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 
@@ -48,9 +49,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString().contains('Exception')
-          ? e.toString().split('Exception: ').last
-          : 'Error de conexion';
+      debugPrint('LOGIN ERROR: ${e.runtimeType} — $e');
+      String message;
+      if (e is ApiException) {
+        message = e.message;
+      } else {
+        message = e.toString();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),

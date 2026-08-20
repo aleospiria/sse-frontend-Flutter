@@ -7,21 +7,14 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ref.watch(authServiceProvider).client;
+});
+
 final authProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final authService = ref.watch(authServiceProvider);
   return AuthNotifier(authService);
-});
-
-final apiClientProvider = Provider<ApiClient>((ref) {
-  final authService = ref.watch(authServiceProvider);
-  final authNotifier = ref.watch(authProvider.notifier);
-  final client = ApiClient(
-    tokenGetter: () => authService.getToken(),
-    onUnauthorized: () => authNotifier.clearSession(),
-  );
-  authService.setApiClient(client);
-  return client;
 });
 
 class AuthState {

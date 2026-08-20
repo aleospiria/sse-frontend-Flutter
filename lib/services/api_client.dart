@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:sse_frontend_mobil/config/api_config.dart';
 
@@ -73,6 +74,7 @@ class ApiClient {
   }
 
   http.Response _handleResponse(http.Response response) {
+    debugPrint('API ${response.request?.method} ${response.request?.url} → ${response.statusCode}');
     if (response.statusCode == 401) {
       _onUnauthorized?.call();
     }

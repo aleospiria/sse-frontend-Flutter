@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
+import 'package:sse_frontend_mobil/screens/admin/manage_users_screen.dart';
 import 'package:sse_frontend_mobil/screens/change_password_screen.dart';
 import 'package:sse_frontend_mobil/screens/home_screen.dart';
 import 'package:sse_frontend_mobil/screens/login_screen.dart';
+import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -37,6 +39,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/processes',
+        builder: (context, state) => const ProcessListScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const ManageUsersScreen(),
       ),
     ],
   );
