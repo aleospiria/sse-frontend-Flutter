@@ -8,6 +8,7 @@ import 'package:sse_frontend_mobil/screens/home_screen.dart';
 import 'package:sse_frontend_mobil/screens/login_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_detail_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
+import 'package:sse_frontend_mobil/screens/notifications_screen.dart';
 import 'package:sse_frontend_mobil/screens/record_step_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -62,6 +63,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           processId: state.pathParameters['processId']!,
           stepId: state.pathParameters['stepId']!,
         ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
   );

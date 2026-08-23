@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
+import 'package:sse_frontend_mobil/providers/notification_provider.dart';
 import 'package:sse_frontend_mobil/providers/process_provider.dart';
 import 'package:sse_frontend_mobil/widgets/process_card.dart';
 import 'package:sse_frontend_mobil/widgets/quick_action_card.dart';
@@ -41,6 +42,7 @@ class HomeScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1.5),
         ),
         actions: [
+          _NotificationBell(),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () async {
@@ -375,6 +377,42 @@ class HomeScreen extends ConsumerWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+class _NotificationBell extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadCountProvider);
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_none_rounded),
+          onPressed: () => context.push('/notifications'),
+        ),
+        if (unread > 0)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF97316),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                unread > 9 ? '9+' : '$unread',
+                style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
+              ),
+            ),
+          ),
       ],
     );
   }
