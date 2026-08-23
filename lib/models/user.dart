@@ -7,6 +7,10 @@ class User {
   final String? email;
   final UserRole role;
   final String? industry;
+  final String? industrySpecialty;
+  final String? cedula;
+  final String? telefono;
+  final String? cargo;
 
   const User({
     required this.id,
@@ -15,6 +19,10 @@ class User {
     this.email,
     required this.role,
     this.industry,
+    this.industrySpecialty,
+    this.cedula,
+    this.telefono,
+    this.cargo,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -28,6 +36,10 @@ class User {
         orElse: () => UserRole.operario,
       ),
       industry: json['industry'] as String?,
+      industrySpecialty: json['industry_specialty'] as String?,
+      cedula: json['cedula'] as String?,
+      telefono: json['telefono'] as String?,
+      cargo: json['cargo'] as String?,
     );
   }
 
@@ -38,6 +50,10 @@ class User {
         'email': email,
         'role': role.name,
         'industry': industry,
+        'industry_specialty': industrySpecialty,
+        'cedula': cedula,
+        'telefono': telefono,
+        'cargo': cargo,
       };
 
   bool get isAdmin => role == UserRole.admin;
