@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/notification_provider.dart';
@@ -33,10 +34,8 @@ class HomeScreen extends ConsumerWidget {
     final user = authState.user!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        foregroundColor: Colors.white,
         title: const Text(
           'SSE',
           style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1.5),
@@ -175,21 +174,28 @@ class HomeScreen extends ConsumerWidget {
           crossAxisSpacing: 12,
           childAspectRatio: 1.4,
           children: [
-            QuickActionCard(
-              icon: Icons.assignment_rounded,
-              label: 'Procesos',
-              subtitle: 'Ver todos',
-              color: const Color(0xFF2563EB),
-              onTap: () => context.push('/processes'),
-            ),
-            if (user.isAdmin) ...[
               QuickActionCard(
-                icon: Icons.people_rounded,
-                label: 'Usuarios',
-                subtitle: 'Gestionar',
-                color: const Color(0xFF7C3AED),
-                onTap: () => context.push('/admin/users'),
+                icon: Icons.assignment_rounded,
+                label: 'Procesos',
+                subtitle: 'Ver todos',
+                color: const Color(0xFF2563EB),
+                onTap: () => context.push('/processes'),
               ),
+              if (user.isAdmin) ...[
+                QuickActionCard(
+                  icon: Icons.add_task_rounded,
+                  label: 'Crear proceso',
+                  subtitle: 'Nuevo',
+                  color: const Color(0xFFF97316),
+                  onTap: () => context.push('/admin/create-process'),
+                ),
+                QuickActionCard(
+                  icon: Icons.people_rounded,
+                  label: 'Usuarios',
+                  subtitle: 'Gestionar',
+                  color: const Color(0xFF7C3AED),
+                  onTap: () => context.push('/admin/users'),
+                ),
               QuickActionCard(
                 icon: Icons.analytics_rounded,
                 label: 'Metricas',
