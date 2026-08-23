@@ -130,9 +130,18 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
 
       final api = ref.read(apiClientProvider);
       final file = File(picked.path);
+      final ext = picked.path.split('.').last.toLowerCase();
+      final contentType = switch (ext) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+        _ => 'image/jpeg',
+      };
       final response = await api.multipart(
         '/uploads/${widget.processId}/${widget.stepId}',
         file: file,
+        contentType: contentType,
       );
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -719,10 +728,10 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
                 ),
               ),
             ),
-            error: (_, _) => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Error al cargar evidencias',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+            error: (err, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('Error: $err',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
             ),
             data: (attachments) {
               if (attachments.isEmpty) {
@@ -749,22 +758,35 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
                     child: Row(
                       children: [
                         if (att.isImage)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.network(
-                              att.url,
-                              width: 44,
-                              height: 44,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                width: 44,
-                                height: 44,
-                                color: const Color(0xFFE2E8F0),
-                                child: const Icon(Icons.broken_image_rounded,
-                                    size: 20, color: Color(0xFF94A3B8)),
-                              ),
-                            ),
-                          )
+                          att.url != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    att.url!,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(
+                                      width: 44,
+                                      height: 44,
+                                      color: const Color(0xFFE2E8F0),
+                                      child: const Icon(
+                                          Icons.broken_image_rounded,
+                                          size: 20,
+                                          color: Color(0xFF94A3B8)),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE2E8F0),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.image_rounded,
+                                      size: 20, color: Color(0xFF94A3B8)),
+                                )
                         else
                           Container(
                             width: 44,

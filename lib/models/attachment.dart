@@ -1,9 +1,9 @@
 class Attachment {
   final String id;
-  final String processId;
-  final String stepId;
+  final String? processId;
+  final String? stepId;
   final String storageKey;
-  final String url;
+  final String? url;
   final String originalName;
   final String mimetype;
   final int sizeBytes;
@@ -12,10 +12,10 @@ class Attachment {
 
   const Attachment({
     required this.id,
-    required this.processId,
-    required this.stepId,
+    this.processId,
+    this.stepId,
     required this.storageKey,
-    required this.url,
+    this.url,
     required this.originalName,
     required this.mimetype,
     required this.sizeBytes,
@@ -26,10 +26,10 @@ class Attachment {
   factory Attachment.fromJson(Map<String, dynamic> json) {
     return Attachment(
       id: json['id'] as String,
-      processId: json['process_id'] as String,
-      stepId: json['step_id'] as String,
+      processId: json['process_id'] as String?,
+      stepId: json['step_id'] as String?,
       storageKey: json['storage_key'] as String,
-      url: json['url'] as String,
+      url: json['url'] as String?,
       originalName: json['original_name'] as String,
       mimetype: json['mimetype'] as String,
       sizeBytes: json['size_bytes'] as int,

@@ -61,6 +61,7 @@ class ApiClient {
     String path, {
     required File file,
     String fieldName = 'file',
+    String? contentType,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final token = await _tokenGetter();
@@ -68,7 +69,14 @@ class ApiClient {
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
-    request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+    final multipartFile = await http.MultipartFile.fromPath(
+      fieldName,
+      file.path,
+      contentType: contentType != null
+          ? http.MediaType.parse(contentType)
+          : null,
+    );
+    request.files.add(multipartFile);
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
     return _handleResponse(response);
