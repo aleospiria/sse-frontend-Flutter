@@ -1,9 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:sse_frontend_mobil/models/attachment.dart';
 import 'package:sse_frontend_mobil/models/field_def.dart';
+import 'package:sse_frontend_mobil/providers/attachment_provider.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/process_detail_provider.dart';
+import 'package:sse_frontend_mobil/services/api_client.dart';
 
 class RecordStepScreen extends ConsumerStatefulWidget {
   final String processId;
@@ -23,8 +30,10 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _formData = {};
   final Map<String, TextEditingController> _controllers = {};
+  final ImagePicker _picker = ImagePicker();
   bool _submitting = false;
   bool _submitted = false;
+  bool _uploading = false;
 
   @override
   void initState() {
@@ -63,6 +72,163 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Seleccionar fuente',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B))),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded,
+                    color: Color(0xFF2563EB)),
+                title: const Text('Galería'),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded,
+                    color: Color(0xFF16A34A)),
+                title: const Text('Cámara'),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (picked == null || !mounted) return;
+
+      setState(() => _uploading = true);
+
+      final api = ref.read(apiClientProvider);
+      final file = File(picked.path);
+      final response = await api.multipart(
+        '/uploads/${widget.processId}/${widget.stepId}',
+        file: file,
+      );
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final attachment = Attachment.fromJson(body);
+
+      ref.invalidate(
+          stepAttachmentsProvider((processId: widget.processId, stepId: widget.stepId)));
+
+      if (!mounted) return;
+      setState(() => _uploading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto "${attachment.originalName}" subida'),
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploading = false);
+
+      String msg;
+      if (e is ApiException) {
+        msg = e.message;
+      } else {
+        msg = 'Error al subir foto';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteAttachment(Attachment attachment) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar evidencia'),
+        content: Text('¿Eliminar "${attachment.originalName}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar',
+                style: TextStyle(color: Color(0xFFDC2626))),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.delete(
+          '/uploads/${widget.processId}/${widget.stepId}/${attachment.id}');
+
+      ref.invalidate(
+          stepAttachmentsProvider((processId: widget.processId, stepId: widget.stepId)));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Evidencia eliminada'),
+          backgroundColor: const Color(0xFF64748B),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No se pudo eliminar'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   @override
@@ -117,6 +283,7 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _buildField(field),
                           )),
+                      _buildAttachmentsSection(),
                       if (_submitted)
                         _buildSuccessBanner(step),
                     ],
@@ -484,6 +651,165 @@ class _RecordStepScreenState extends ConsumerState<RecordStepScreen> {
           borderSide: const BorderSide(color: Color(0xFFDC2626))),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    );
+  }
+
+  Widget _buildAttachmentsSection() {
+    final params = (processId: widget.processId, stepId: widget.stepId);
+    final attachmentsAsync = ref.watch(stepAttachmentsProvider(params));
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.camera_alt_rounded,
+                  size: 16, color: Color(0xFF64748B)),
+              const SizedBox(width: 6),
+              const Text('Evidencias',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B))),
+              const Spacer(),
+              if (_uploading)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFFF97316)),
+                )
+              else
+                TextButton.icon(
+                  onPressed: _pickAndUploadPhoto,
+                  icon: const Icon(Icons.add_photo_alternate_rounded,
+                      size: 18),
+                  label: const Text('Agregar'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFF97316),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+            ],
+          ),
+          attachmentsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFF94A3B8)),
+                ),
+              ),
+            ),
+            error: (_, _) => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Error al cargar evidencias',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+            ),
+            data: (attachments) {
+              if (attachments.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                      _uploading
+                          ? 'Subiendo archivo...'
+                          : 'Sin evidencias adjuntas',
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFCBD5E1))),
+                );
+              }
+
+              return Column(
+                children: attachments.map((att) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        if (att.isImage)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              att.url,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 44,
+                                height: 44,
+                                color: const Color(0xFFE2E8F0),
+                                child: const Icon(Icons.broken_image_rounded,
+                                    size: 20, color: Color(0xFF94A3B8)),
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Icons.description_rounded,
+                                size: 20, color: Color(0xFFF59E0B)),
+                          ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(att.originalName,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF1E293B)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 2),
+                              Text(att.sizeFormatted,
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF94A3B8))),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _deleteAttachment(att),
+                          child: const Icon(Icons.delete_outline_rounded,
+                              size: 18, color: Color(0xFFDC2626)),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

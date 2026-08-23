@@ -6,7 +6,9 @@ import 'package:sse_frontend_mobil/screens/admin/manage_users_screen.dart';
 import 'package:sse_frontend_mobil/screens/change_password_screen.dart';
 import 'package:sse_frontend_mobil/screens/home_screen.dart';
 import 'package:sse_frontend_mobil/screens/login_screen.dart';
+import 'package:sse_frontend_mobil/screens/process_detail_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
+import 'package:sse_frontend_mobil/screens/record_step_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -47,6 +49,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/users',
         builder: (context, state) => const ManageUsersScreen(),
+      ),
+      GoRoute(
+        path: '/process/:id',
+        builder: (context, state) => ProcessDetailScreen(
+          processId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/process/:processId/step/:stepId',
+        builder: (context, state) => RecordStepScreen(
+          processId: state.pathParameters['processId']!,
+          stepId: state.pathParameters['stepId']!,
+        ),
       ),
     ],
   );

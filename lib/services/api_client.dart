@@ -70,7 +70,8 @@ class ApiClient {
     }
     request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
     final streamedResponse = await request.send();
-    return http.Response.fromStream(streamedResponse);
+    final response = await http.Response.fromStream(streamedResponse);
+    return _handleResponse(response);
   }
 
   http.Response _handleResponse(http.Response response) {
@@ -80,11 +81,16 @@ class ApiClient {
     }
     if (response.statusCode >= 400) {
       String message;
-      try {
-        final body = jsonDecode(response.body);
-        message = body['error'] as String? ?? 'Error ${response.statusCode}';
-      } catch (_) {
-        message = 'Error ${response.statusCode}';
+      final body = response.body;
+      if (body.startsWith('<')) {
+        message = 'Error del servidor (${response.statusCode})';
+      } else {
+        try {
+          final json = jsonDecode(body);
+          message = json['error'] as String? ?? 'Error ${response.statusCode}';
+        } catch (_) {
+          message = 'Error ${response.statusCode}';
+        }
       }
       throw ApiException(statusCode: response.statusCode, message: message);
     }

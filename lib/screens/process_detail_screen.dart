@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sse_frontend_mobil/models/step.dart' as models;
+import 'package:sse_frontend_mobil/providers/attachment_provider.dart';
 import 'package:sse_frontend_mobil/providers/process_detail_provider.dart';
 import 'package:sse_frontend_mobil/widgets/progress_bar.dart';
 import 'package:sse_frontend_mobil/widgets/status_badge.dart';
@@ -248,19 +249,22 @@ class ProcessDetailScreen extends ConsumerWidget {
   }
 }
 
-class _StepCard extends StatelessWidget {
+class _StepCard extends ConsumerWidget {
   final models.Step step;
   final bool isClosed;
 
   const _StepCard({required this.step, required this.isClosed});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final record = step.record;
     final hasRecord = record != null;
     final isConfirmed = record?.isConfirmed ?? false;
     final isFailed = record?.isFailed ?? false;
     final canRecord = !isClosed && step.isAssigned && !isConfirmed;
+
+    final attachmentsAsync = ref.watch(
+        stepAttachmentsProvider((processId: step.processId, stepId: step.id)));
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -324,6 +328,25 @@ class _StepCard extends StatelessWidget {
                       fontSize: 12, color: Color(0xFFF59E0B))),
             ]),
           ],
+          attachmentsAsync.when(
+            data: (attachments) {
+              if (attachments.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(children: [
+                  const Icon(Icons.attach_file_rounded,
+                      size: 14, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 4),
+                  Text(
+                      '${attachments.length} evidencia${attachments.length == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF2563EB))),
+                ]),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
           if (hasRecord && record.dataHash != null) ...[
             const SizedBox(height: 8),
             Container(
