@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/models/step.dart' as models;
+import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/attachment_provider.dart';
+import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/process_detail_provider.dart';
+import 'package:sse_frontend_mobil/providers/users_provider.dart';
 import 'package:sse_frontend_mobil/widgets/progress_bar.dart';
 import 'package:sse_frontend_mobil/widgets/status_badge.dart';
 
@@ -15,6 +19,8 @@ class ProcessDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(processDetailProvider(processId));
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
@@ -55,7 +61,10 @@ class ProcessDetailScreen extends ConsumerWidget {
                 else
                   ...steps.map((s) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _StepCard(step: s, isClosed: isClosed),
+                        child: _StepCard(
+                            step: s,
+                            isClosed: isClosed,
+                            user: user),
                       )),
               ],
             ),
@@ -252,8 +261,9 @@ class ProcessDetailScreen extends ConsumerWidget {
 class _StepCard extends ConsumerWidget {
   final models.Step step;
   final bool isClosed;
+  final User? user;
 
-  const _StepCard({required this.step, required this.isClosed});
+  const _StepCard({required this.step, required this.isClosed, this.user});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -261,6 +271,9 @@ class _StepCard extends ConsumerWidget {
     final hasRecord = record != null;
     final isConfirmed = record?.isConfirmed ?? false;
     final isFailed = record?.isFailed ?? false;
+    final isAdmin = user?.isAdmin == true;
+    final isCoord = user?.isCoordinador == true;
+    final canManage = isAdmin || isCoord;
     final canRecord = !isClosed && step.isAssigned && !isConfirmed;
 
     final attachmentsAsync = ref.watch(
@@ -306,17 +319,21 @@ class _StepCard extends ConsumerWidget {
             ),
             if (hasRecord) _recordBadge(record.status.name),
           ]),
+
+          // Assigned user info
           if (step.isAssigned && step.assignedUsername != null) ...[
             const SizedBox(height: 10),
             Row(children: [
               const Icon(Icons.person_outline_rounded,
-                  size: 14, color: Color(0xFF94A3B8)),
+                  size: 14, color: Color(0xFF64748B)),
               const SizedBox(width: 4),
               Text(step.assignedUsername!,
                   style: const TextStyle(
                       fontSize: 12, color: Color(0xFF64748B))),
             ]),
           ],
+
+          // Deadline
           if (step.deadline != null) ...[
             const SizedBox(height: 6),
             Row(children: [
@@ -328,6 +345,8 @@ class _StepCard extends ConsumerWidget {
                       fontSize: 12, color: Color(0xFFF59E0B))),
             ]),
           ],
+
+          // Attachments
           attachmentsAsync.when(
             data: (attachments) {
               if (attachments.isEmpty) return const SizedBox.shrink();
@@ -347,6 +366,8 @@ class _StepCard extends ConsumerWidget {
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
           ),
+
+          // Hash
           if (hasRecord && record.dataHash != null) ...[
             const SizedBox(height: 8),
             Container(
@@ -369,36 +390,145 @@ class _StepCard extends ConsumerWidget {
               ]),
             ),
           ],
-          if (canRecord) ...[
+
+          // ── Action buttons (role-aware) ──
+          if (!isClosed) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => context.push(
-                    '/process/${step.processId}/step/${step.id}'),
-                icon: Icon(
-                    hasRecord
-                        ? Icons.refresh_rounded
-                        : Icons.edit_rounded,
-                    size: 16),
-                label:
-                    Text(hasRecord ? 'Re-registrar' : 'Registrar etapa'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isFailed
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFFF97316),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
+            // Admin/Coord: assign + deadline buttons
+            if (canManage) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          _showAssignSheet(context, ref, step.processId, step.id),
+                      icon: const Icon(Icons.person_add_outlined, size: 16),
+                      label: Text(
+                          step.isAssigned ? 'Cambiar operario' : 'Asignar'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          _showDeadlinePicker(context, ref, step.processId, step.id),
+                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                      label: Text(step.deadline != null ? 'Cambiar fecha' : 'Fecha limite'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // Operario: record button
+            if (canRecord && !canManage) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push(
+                      '/process/${step.processId}/step/${step.id}'),
+                  icon: Icon(
+                      hasRecord ? Icons.refresh_rounded : Icons.edit_rounded,
+                      size: 16),
+                  label:
+                      Text(hasRecord ? 'Re-registrar' : 'Registrar etapa'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isFailed
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFFF97316),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
                 ),
               ),
-            ),
+            ],
+
+            // Admin/Coord: also show record button if step IS assigned
+            if (canManage && canRecord) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push(
+                      '/process/${step.processId}/step/${step.id}'),
+                  icon: Icon(
+                      hasRecord ? Icons.refresh_rounded : Icons.edit_rounded,
+                      size: 16),
+                  label:
+                      Text(hasRecord ? 'Re-registrar' : 'Registrar etapa'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isFailed
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFFF97316),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
           ],
         ],
       ),
     );
+  }
+
+  void _showAssignSheet(
+      BuildContext context, WidgetRef ref, String processId, String stepId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _AssignOperarioSheet(
+          processId: processId, stepId: stepId),
+    );
+  }
+
+  void _showDeadlinePicker(
+      BuildContext context, WidgetRef ref, String processId, String stepId) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: step.deadline != null
+          ? DateTime.tryParse(step.deadline!) ?? now.add(Duration(days: 15))
+          : now.add(Duration(days: 15)),
+      firstDate: now,
+      lastDate: now.add(Duration(days: 365)),
+    );
+    if (picked != null && context.mounted) {
+      try {
+        final api = ref.read(apiClientProvider);
+        await api.put('/process/$processId/step/$stepId/deadline',
+            body: {'deadline': picked.toUtc().toIso8601String()});
+        ref.invalidate(processDetailProvider(processId));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Fecha limite actualizada'),
+              backgroundColor: Color(0xFF10B981)));
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Color(0xFFEF4444)));
+        }
+      }
+    }
   }
 
   Widget _number(int order, bool confirmed) {
@@ -426,5 +556,128 @@ class _StepCard extends ConsumerWidget {
 
   Widget _recordBadge(String status) {
     return StatusBadge.record(status);
+  }
+}
+
+// ─── Assign Operario Sheet ────────────────────────────────
+
+class _AssignOperarioSheet extends ConsumerStatefulWidget {
+  final String processId;
+  final String stepId;
+
+  const _AssignOperarioSheet({required this.processId, required this.stepId});
+
+  @override
+  ConsumerState<_AssignOperarioSheet> createState() =>
+      _AssignOperarioSheetState();
+}
+
+class _AssignOperarioSheetState extends ConsumerState<_AssignOperarioSheet> {
+  String? _selectedUserId;
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final operariosAsync = ref.watch(operariosProvider);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Asignar operario',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textDark)),
+          SizedBox(height: 16),
+          operariosAsync.when(
+            loading: () => Center(
+                child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(color: AppTheme.primaryDark))),
+            error: (e, _) => Text('Error: $e',
+                style: TextStyle(color: Color(0xFFEF4444))),
+            data: (operarios) {
+              if (operarios.isEmpty) {
+                return Text('No hay operarios disponibles',
+                    style: TextStyle(color: AppTheme.textLight));
+              }
+              return DropdownButtonFormField<String>(
+                initialValue: _selectedUserId,
+                decoration: InputDecoration(
+                    labelText: 'Operario',
+                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20)),
+                items: operarios
+                    .map((o) => DropdownMenuItem(
+                        value: o.id,
+                        child: Text(o.name,
+                            style: TextStyle(fontSize: 14))))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedUserId = v),
+              );
+            },
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancelar'),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _assign,
+                  child: _loading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Asignar'),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _assign() async {
+    if (_selectedUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Selecciona un operario'),
+          backgroundColor: Color(0xFFF97316)));
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.put(
+          '/process/${widget.processId}/step/${widget.stepId}/assign',
+          body: {'user_id': _selectedUserId});
+      ref.invalidate(processDetailProvider(widget.processId));
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Operario asignado'),
+            backgroundColor: Color(0xFF10B981)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Color(0xFFEF4444)));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }

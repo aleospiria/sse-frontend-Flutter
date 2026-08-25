@@ -5,6 +5,13 @@ import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/services/api_client.dart';
 
+class UpdateResult {
+  final User user;
+  final String? cognitoWarning;
+
+  const UpdateResult({required this.user, this.cognitoWarning});
+}
+
 final usersProvider =
     StateNotifierProvider<UsersNotifier, AsyncValue<List<User>>>((ref) {
   return UsersNotifier(ref)..load();
@@ -51,7 +58,7 @@ class UsersNotifier extends StateNotifier<AsyncValue<List<User>>> {
     return user;
   }
 
-  Future<User> update(String id, {
+  Future<UpdateResult> update(String id, {
     String? username,
     String? name,
     String? email,
@@ -76,9 +83,11 @@ class UsersNotifier extends StateNotifier<AsyncValue<List<User>>> {
     if (password != null && password.isNotEmpty) body['password'] = password;
 
     final res = await _api.put('/auth/users/$id', body: body);
-    final user = _api.parse(res, User.fromJson);
+    final json = jsonDecode(res.body) as Map<String, dynamic>;
+    final user = User.fromJson(json);
+    final warning = json['cognito_warning'] as String?;
     load();
-    return user;
+    return UpdateResult(user: user, cognitoWarning: warning);
   }
 
   Future<void> delete(String id) async {

@@ -731,7 +731,7 @@ class _EditUserSheetState extends ConsumerState<_EditUserSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await ref.read(usersProvider.notifier).update(
+      final result = await ref.read(usersProvider.notifier).update(
             widget.user.id,
             username: _usernameCtrl.text.trim(),
             name: _nameCtrl.text.trim(),
@@ -742,8 +742,10 @@ class _EditUserSheetState extends ConsumerState<_EditUserSheet> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Usuario actualizado'),
-            backgroundColor: Color(0xFF10B981)));
+            content: Text(result.cognitoWarning ?? 'Usuario actualizado'),
+            backgroundColor: result.cognitoWarning != null
+                ? Color(0xFFF97316)
+                : Color(0xFF10B981)));
       }
     } catch (e) {
       if (mounted) {

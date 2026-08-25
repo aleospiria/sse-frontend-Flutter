@@ -181,13 +181,13 @@ class HomeScreen extends ConsumerWidget {
                 color: const Color(0xFF2563EB),
                 onTap: () => context.push('/processes'),
               ),
-              if (user.isAdmin) ...[
+              if (user.isAdmin || user.isCoordinador) ...[
                 QuickActionCard(
                   icon: Icons.add_task_rounded,
                   label: 'Crear proceso',
                   subtitle: 'Nuevo',
                   color: const Color(0xFFF97316),
-                  onTap: () => context.push('/admin/create-process'),
+                  onTap: () => context.push('/create-process'),
                 ),
                 QuickActionCard(
                   icon: Icons.people_rounded,
