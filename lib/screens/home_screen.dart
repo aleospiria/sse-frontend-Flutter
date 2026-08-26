@@ -201,7 +201,7 @@ class HomeScreen extends ConsumerWidget {
                 label: 'Metricas',
                 subtitle: 'Ver estadisticas',
                 color: const Color(0xFF059669),
-                onTap: () {},
+                onTap: () => context.push('/metrics'),
               ),
               QuickActionCard(
                 icon: Icons.description_rounded,

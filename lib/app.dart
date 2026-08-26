@@ -12,6 +12,7 @@ import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
 import 'package:sse_frontend_mobil/screens/notifications_screen.dart';
 import 'package:sse_frontend_mobil/screens/record_step_screen.dart';
 import 'package:sse_frontend_mobil/screens/create_process_screen.dart';
+import 'package:sse_frontend_mobil/screens/metrics_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -73,6 +74,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/create-process',
         builder: (context, state) => const CreateProcessScreen(),
+      ),
+      GoRoute(
+        path: '/metrics',
+        builder: (context, state) => const MetricsScreen(),
       ),
     ],
   );
