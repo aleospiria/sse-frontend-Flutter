@@ -8,11 +8,13 @@ import 'package:sse_frontend_mobil/screens/change_password_screen.dart';
 import 'package:sse_frontend_mobil/screens/home_screen.dart';
 import 'package:sse_frontend_mobil/screens/login_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_detail_screen.dart';
+import 'package:sse_frontend_mobil/screens/verify_process_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
 import 'package:sse_frontend_mobil/screens/notifications_screen.dart';
 import 'package:sse_frontend_mobil/screens/record_step_screen.dart';
 import 'package:sse_frontend_mobil/screens/create_process_screen.dart';
 import 'package:sse_frontend_mobil/screens/metrics_screen.dart';
+import 'package:sse_frontend_mobil/screens/admin/manage_templates_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -61,6 +63,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/process/:id/verify',
+        builder: (context, state) => VerifyProcessScreen(
+          processId: state.pathParameters['id']!,
+          processName: state.extra as String? ?? '',
+        ),
+      ),
+      GoRoute(
         path: '/process/:processId/step/:stepId',
         builder: (context, state) => RecordStepScreen(
           processId: state.pathParameters['processId']!,
@@ -78,6 +87,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/metrics',
         builder: (context, state) => const MetricsScreen(),
+      ),
+      GoRoute(
+        path: '/templates',
+        builder: (context, state) => const ManageTemplatesScreen(),
       ),
     ],
   );

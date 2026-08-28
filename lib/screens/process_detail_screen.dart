@@ -29,6 +29,19 @@ class ProcessDetailScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         title: const Text('Detalle',
             style: TextStyle(fontWeight: FontWeight.w600)),
+        actions: [
+          if (user != null && (user.isAdmin || user.isCoordinador || user.isAuditor))
+            IconButton(
+              tooltip: 'Verificar integridad',
+              onPressed: () {
+                final name =
+                    detailAsync.valueOrNull?.process['name'] as String?;
+                context.push('/process/$processId/verify',
+                    extra: name ?? '');
+              },
+              icon: const Icon(Icons.verified_rounded),
+            ),
+        ],
       ),
       body: detailAsync.when(
         loading: () => const Center(

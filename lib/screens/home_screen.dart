@@ -208,7 +208,7 @@ class HomeScreen extends ConsumerWidget {
                 label: 'Plantillas',
                 subtitle: 'Crear/editar',
                 color: const Color(0xFFF97316),
-                onTap: () {},
+                onTap: () => context.push('/templates'),
               ),
             ],
           ],
