@@ -10,6 +10,8 @@ import 'package:sse_frontend_mobil/screens/login_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_detail_screen.dart';
 import 'package:sse_frontend_mobil/screens/verify_process_screen.dart';
 import 'package:sse_frontend_mobil/screens/verify_seal_screen.dart';
+import 'package:sse_frontend_mobil/screens/traceability_qr_screen.dart';
+import 'package:sse_frontend_mobil/screens/public_traceability_screen.dart';
 import 'package:sse_frontend_mobil/screens/process_list_screen.dart';
 import 'package:sse_frontend_mobil/screens/notifications_screen.dart';
 import 'package:sse_frontend_mobil/screens/record_step_screen.dart';
@@ -99,6 +101,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/templates',
         builder: (context, state) => const ManageTemplatesScreen(),
+      ),
+      GoRoute(
+        path: '/process/:id/qr',
+        builder: (context, state) => TraceabilityQrScreen(
+          processId: state.pathParameters['id']!,
+          processName: (state.extra as Map<String, dynamic>?)?['name'] ??
+              state.uri.queryParameters['name'] ??
+              '',
+        ),
+      ),
+      GoRoute(
+        path: '/public/traceability/:code',
+        builder: (context, state) => PublicTraceabilityScreen(
+          code: state.pathParameters['code']!,
+        ),
       ),
     ],
   );

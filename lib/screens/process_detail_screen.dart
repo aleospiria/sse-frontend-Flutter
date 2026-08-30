@@ -34,6 +34,17 @@ class ProcessDetailScreen extends ConsumerWidget {
         actions: [
           if (user != null && (user.isAdmin || user.isCoordinador || user.isAuditor))
             IconButton(
+              tooltip: 'Codigo QR',
+              onPressed: () {
+                final name =
+                    detailAsync.valueOrNull?.process['name'] as String? ?? '';
+                context.push('/process/$processId/qr',
+                    extra: {'name': name});
+              },
+              icon: const Icon(Icons.qr_code_2_rounded),
+            ),
+          if (user != null && (user.isAdmin || user.isCoordinador || user.isAuditor))
+            IconButton(
               tooltip: 'Verificar integridad',
               onPressed: () {
                 final name =
