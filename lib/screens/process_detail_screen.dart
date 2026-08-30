@@ -65,6 +65,27 @@ class ProcessDetailScreen extends ConsumerWidget {
                 if (isClosed) ...[
                   const SizedBox(height: 12),
                   _buildSealedBanner(process),
+                  if (user != null &&
+                      (user.isAdmin || user.isCoordinador || user.isAuditor)) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push(
+                            '/process/$processId/verify-seal',
+                            extra: process['name'] as String? ?? ''),
+                        icon: const Icon(Icons.verified_user_rounded, size: 18),
+                        label: const Text('Verificar sello global'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF7C3AED),
+                          side: const BorderSide(color: Color(0xFF7C3AED)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 20),
                 _buildStepsHeader(steps.length),
