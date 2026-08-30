@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/models/step.dart' as models;
+import 'package:sse_frontend_mobil/models/step_record.dart' as models;
 import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/attachment_provider.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
@@ -401,29 +403,10 @@ class _StepCard extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
           ),
 
-          // Hash
-          if (hasRecord && record.dataHash != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8)),
-              child: Row(children: [
-                const Icon(Icons.lock_outline_rounded,
-                    size: 12, color: Color(0xFF94A3B8)),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                      'Hash: ${record.dataHash!.substring(0, 20)}...',
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          color: Color(0xFF94A3B8))),
-                ),
-              ]),
-            ),
-          ],
+          // Blockchain data
+          if (hasRecord && record.dataHash != null)
+            _buildBlockchainInfo(context, record, isConfirmed,
+                record.txHash != null),
 
           // ── Action buttons (role-aware) ──
           if (!isClosed) ...[
@@ -520,6 +503,101 @@ class _StepCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildBlockchainInfo(
+      BuildContext context,
+      models.StepRecord record,
+      bool isConfirmed,
+      bool hasTx) {
+    final bgColor =
+        isConfirmed ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC);
+    final borderColor = isConfirmed
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFFE2E8F0);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Data hash row
+          Row(children: [
+            Icon(
+                isConfirmed
+                    ? Icons.verified_rounded
+                    : Icons.lock_outline_rounded,
+                size: 13,
+                color:
+                    isConfirmed ? const Color(0xFF2563EB) : const Color(0xFF94A3B8)),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                  'SHA-256: ${record.dataHash!.substring(0, 18)}...',
+                  style: const TextStyle(
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      color: Color(0xFF64748B))),
+            ),
+          ]),
+
+          // TX hash + block + polygonscan
+          if (record.txHash != null) ...[
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.link_rounded,
+                  size: 13, color: Color(0xFF2563EB)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${record.txHash!.substring(0, 14)}...${record.txHash!.substring(record.txHash!.length - 6)}',
+                  style: const TextStyle(
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      color: Color(0xFF2563EB))),
+              ),
+              InkWell(
+                onTap: () => _openPolygonscan(record.txHash!),
+                child: const Icon(Icons.open_in_new_rounded,
+                    size: 14, color: Color(0xFF2563EB)),
+              ),
+            ]),
+            if (record.blockNumber != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.block_rounded,
+                    size: 13, color: Color(0xFF64748B)),
+                const SizedBox(width: 4),
+                Text('Bloque #${record.blockNumber}',
+                    style: const TextStyle(
+                        fontSize: 10, color: Color(0xFF64748B))),
+              ]),
+            ],
+          ] else if (!isConfirmed) ...[
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.hourglass_top_rounded,
+                  size: 13, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 4),
+              const Text('Confirmando en blockchain...',
+                  style: TextStyle(
+                      fontSize: 10, color: Color(0xFFF59E0B))),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPolygonscan(String txHash) async {
+    final url = Uri.parse('https://amoy.polygonscan.com/tx/$txHash');
+    await launchUrl(url);
   }
 
   void _showAssignSheet(
