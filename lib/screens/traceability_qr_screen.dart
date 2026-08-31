@@ -90,8 +90,17 @@ class TraceabilityQrScreen extends StatelessWidget {
                 Row(children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          Clipboard.setData(ClipboardData(text: _publicUrl)),
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            ClipboardData(text: _publicUrl));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Link copiado correctamente'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 2),
+                          ));
+                        }
+                      },
                       icon: Icon(Icons.copy_rounded, size: 16),
                       label: Text('Copiar link'),
                     ),
@@ -139,6 +148,13 @@ class TraceabilityQrScreen extends StatelessWidget {
                         '/public/traceability/${Uri.encodeComponent(processName)}'),
                     icon: Icon(Icons.visibility_rounded, size: 18),
                     label: Text('Ver trazabilidad en la app'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFF97316),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ],

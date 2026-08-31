@@ -75,6 +75,11 @@ class ProcessDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               children: [
                 _buildHeader(process, steps),
+                if (user != null &&
+                    (user.isAdmin || user.isCoordinador || user.isAuditor)) ...[
+                  const SizedBox(height: 12),
+                  _buildQrAccessCard(context, process),
+                ],
                 if (isClosed) ...[
                   const SizedBox(height: 12),
                   _buildSealedBanner(process),
@@ -224,6 +229,57 @@ class ProcessDetailScreen extends ConsumerWidget {
             style:
                 const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
       ]),
+    );
+  }
+
+  Widget _buildQrAccessCard(BuildContext context, Map<String, dynamic> process) {
+    final name = process['name'] as String? ?? '';
+    return Material(
+      color: const Color(0xFFF97316),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () =>
+            context.push('/process/$processId/qr', extra: {'name': name}),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.qr_code_2_rounded,
+                  size: 26, color: Color(0xFFEA580C)),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Codigo QR de trazabilidad',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                  SizedBox(height: 3),
+                  Text('Comparte el link publico para verificar',
+                      style: TextStyle(
+                          fontSize: 12, color: Color(0xFFFFF7ED))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Colors.white, size: 24),
+          ]),
+        ),
+      ),
     );
   }
 
