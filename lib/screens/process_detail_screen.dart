@@ -9,6 +9,8 @@ import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/attachment_provider.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/process_detail_provider.dart';
+import 'package:sse_frontend_mobil/providers/seal_process_provider.dart';
+import 'package:sse_frontend_mobil/providers/seal_verify_provider.dart';
 import 'package:sse_frontend_mobil/providers/users_provider.dart';
 import 'package:sse_frontend_mobil/widgets/progress_bar.dart';
 import 'package:sse_frontend_mobil/widgets/status_badge.dart';
@@ -79,6 +81,12 @@ class ProcessDetailScreen extends ConsumerWidget {
                     (user.isAdmin || user.isCoordinador || user.isAuditor)) ...[
                   const SizedBox(height: 12),
                   _buildQrAccessCard(context, process),
+                ],
+                if (!isClosed &&
+                    user != null &&
+                    (user.isAdmin || user.isCoordinador)) ...[
+                  const SizedBox(height: 12),
+                  _buildSealProcessCard(context, ref, process, steps),
                 ],
                 if (isClosed) ...[
                   const SizedBox(height: 12),
@@ -281,6 +289,124 @@ class ProcessDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildSealProcessCard(
+      BuildContext context,
+      WidgetRef ref,
+      Map<String, dynamic> process,
+      List<models.Step> steps) {
+    final allConfirmed =
+        steps.isNotEmpty && steps.every((s) => s.record?.isConfirmed ?? false);
+    final confirmedCount =
+        steps.where((s) => s.record?.isConfirmed ?? false).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF7C3AED).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.lock_rounded, size: 20, color: Color(0xFF7C3AED)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('Sellar proceso en blockchain',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6D28D9))),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            allConfirmed
+                ? 'Todas las etapas ($confirmedCount) estan confirmadas. Puedes sellar el proceso para hacerlo inmutable.'
+                : confirmedCount == 0
+                    ? 'Aun no hay etapas confirmadas. Completa y confirma las etapas para poder sellar.'
+                    : 'Confirma las etapas primero ($confirmedCount/${steps.length}). Todas deben estar confirmadas para sellar.',
+            style: const TextStyle(
+                fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: allConfirmed
+                  ? () => _confirmSeal(
+                      context, ref, process['name'] as String? ?? '')
+                  : null,
+              icon: const Icon(Icons.verified_rounded, size: 18),
+              label: Text(allConfirmed ? 'Sellar proceso' : 'Etapas pendientes'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFE2E8F0),
+                disabledForegroundColor: const Color(0xFF94A3B8),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmSeal(
+      BuildContext context, WidgetRef ref, String processName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sellar proceso'),
+        content: Text(
+            'El proceso "$processName" quedara sellado e inmutable en blockchain. No se podra editar. \u00bfContinuar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Sellar',
+              style: TextStyle(color: Color(0xFF7C3AED)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Sellando proceso en blockchain...'),
+      behavior: SnackBarBehavior.floating,
+    ));
+
+    try {
+      await ref.read(sealProcessProvider.notifier).seal(processId);
+      ref.invalidate(processDetailProvider(processId));
+      ref.invalidate(processSealVerifyProvider(processId));
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text('Proceso sellado correctamente'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text('Error al sellar: $e'),
+        backgroundColor: const Color(0xFFDC2626),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   Widget _buildSealedBanner(Map<String, dynamic> process) {
