@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/providers/metrics_provider.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 class MetricsScreen extends ConsumerWidget {
   const MetricsScreen({super.key});
@@ -24,9 +25,7 @@ class MetricsScreen extends ConsumerWidget {
         ],
       ),
       body: metricsAsync.when(
-        loading: () => Center(
-            child:
-                CircularProgressIndicator(color: AppTheme.primaryDark)),
+        loading: () => const _MetricsSkeleton(),
         error: (e, _) => Center(
           child: Padding(
             padding: EdgeInsets.all(24),
@@ -529,5 +528,48 @@ class MetricsScreen extends ConsumerWidget {
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ];
     return m >= 1 && m <= 12 ? months[m] : '';
+  }
+}
+
+class _MetricsSkeleton extends StatelessWidget {
+  const _MetricsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        const SkeletonBox(width: 140, height: 18),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Expanded(child: SkeletonBox(height: 84)),
+            const SizedBox(width: 12),
+            const Expanded(child: SkeletonBox(height: 84)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(child: SkeletonBox(height: 84)),
+            const SizedBox(width: 12),
+            const Expanded(child: SkeletonBox(height: 84)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const SkeletonBox(width: 140, height: 18),
+        const SizedBox(height: 16),
+        const SkeletonBox(height: 180),
+        const SizedBox(height: 24),
+        const SkeletonBox(width: 140, height: 18),
+        const SizedBox(height: 16),
+        const SkeletonBox(height: 120),
+        const SizedBox(height: 24),
+        const SkeletonBox(width: 140, height: 18),
+        const SizedBox(height: 16),
+        const SkeletonBox(height: 120),
+      ],
+    );
   }
 }

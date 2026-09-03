@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sse_frontend_mobil/models/app_notification.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/notification_provider.dart';
+import 'package:sse_frontend_mobil/widgets/empty_state.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -33,54 +35,20 @@ class NotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: notificationsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF1E293B)),
-        ),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.notifications_off_rounded,
-                  size: 48, color: Color(0xFF94A3B8)),
-              const SizedBox(height: 16),
-              const Text('Error al cargar notificaciones',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B))),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () => ref.invalidate(notificationsProvider),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Reintentar'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E293B),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
+        loading: () => const ListSkeleton(count: 6),
+        error: (e, _) => EmptyState(
+          icon: Icons.notifications_off_rounded,
+          title: 'Error al cargar notificaciones',
+          actionLabel: 'Reintentar',
+          onAction: () => ref.invalidate(notificationsProvider),
         ),
         data: (response) {
           final items = response.notifications;
           if (items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_none_rounded,
-                      size: 64,
-                      color: const Color(0xFFCBD5E1).withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  const Text('Sin notificaciones',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF94A3B8))),
-                ],
-              ),
+            return const EmptyState(
+              icon: Icons.notifications_none_rounded,
+              title: 'Sin notificaciones',
+              message: 'Cuando haya novedades apareceran aqui',
             );
           }
 

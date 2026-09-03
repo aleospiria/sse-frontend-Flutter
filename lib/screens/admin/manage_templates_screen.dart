@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/providers/templates_provider.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 class ManageTemplatesScreen extends ConsumerStatefulWidget {
   const ManageTemplatesScreen({super.key});
@@ -38,8 +39,7 @@ class _ManageTemplatesScreenState
         ],
       ),
       body: templatesAsync.when(
-        loading: () => Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryDark)),
+        loading: () => const ListSkeleton(count: 4),
         error: (e, _) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.error_outline_rounded,
@@ -220,9 +220,7 @@ class _TemplateDetailScreen extends ConsumerWidget {
         future: ref.read(templatesListProvider.notifier).getDetail(template.id),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return Center(
-                child: CircularProgressIndicator(
-                    color: AppTheme.primaryDark));
+            return const ListSkeleton(count: 3);
           }
           if (snap.hasError || !snap.hasData) {
             return Center(child: Text('Error al cargar detalle'));

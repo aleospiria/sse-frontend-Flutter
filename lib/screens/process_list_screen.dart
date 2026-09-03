@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sse_frontend_mobil/models/process.dart';
 import 'package:sse_frontend_mobil/providers/process_provider.dart';
+import 'package:sse_frontend_mobil/widgets/empty_state.dart';
 import 'package:sse_frontend_mobil/widgets/process_card.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 enum _StatusFilter { all, active, closed }
 
@@ -167,88 +169,31 @@ class _ProcessListScreenState extends ConsumerState<ProcessListScreen> {
 
   Widget _buildProcessList(AsyncValue<List<Process>> processState) {
     return processState.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF1E293B)),
-      ),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.wifi_off_rounded,
-                  size: 48, color: Color(0xFF94A3B8)),
-              const SizedBox(height: 16),
-              const Text(
-                'Sin conexion',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Verifica tu conexion a internet',
-                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () =>
-                    ref.read(processListProvider.notifier).refresh(),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Reintentar'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E293B),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ],
-          ),
-        ),
+      loading: () => const ListSkeleton(count: 5),
+      error: (e, _) => EmptyState(
+        icon: Icons.wifi_off_rounded,
+        title: 'Sin conexion',
+        message: 'Verifica tu conexion a internet',
+        actionLabel: 'Reintentar',
+        onAction: () => ref.read(processListProvider.notifier).refresh(),
       ),
       data: (processes) {
         final filtered = _filterProcesses(processes);
 
         if (filtered.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _searchQuery.isNotEmpty || _statusFilter != _StatusFilter.all
-                        ? Icons.search_off_rounded
-                        : Icons.assignment_turned_in_rounded,
-                    size: 48,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _searchQuery.isNotEmpty || _statusFilter != _StatusFilter.all
-                        ? 'Sin resultados'
-                        : 'Sin procesos',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _searchQuery.isNotEmpty || _statusFilter != _StatusFilter.all
-                        ? 'Intenta con otros filtros'
-                        : 'No hay procesos disponibles',
-                    style:
-                        const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                  ),
-                ],
-              ),
-            ),
-          );
+          final isFiltering =
+              _searchQuery.isNotEmpty || _statusFilter != _StatusFilter.all;
+          return isFiltering
+              ? EmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'Sin resultados',
+                  message: 'Intenta con otros filtros',
+                )
+              : const EmptyState(
+                  icon: Icons.assignment_turned_in_rounded,
+                  title: 'Sin procesos',
+                  message: 'No hay procesos disponibles',
+                );
         }
 
         final grouped = _groupByClient(filtered);

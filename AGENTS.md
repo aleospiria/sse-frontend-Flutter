@@ -49,6 +49,7 @@ Flutter app ──HTTPS + Bearer JWT──▶ API REST (Express, Node.js, puerto
 ## Backend desplegado
 
 - **Base URL:** `https://api.sse-sistema.com`
+- **Web publico de verificacion:** `https://sse-sistema.com` — el QR de trazabilidad de la app apunta a `https://sse-sistema.com/verificar?codigo=<PROCESO>`.
 - Health check: `GET /health` → `{ status: 'ok' }`
 - CORS habilitado globalmente.
 - Token JWT expira a las **8 horas**. Se envía en header `Authorization: Bearer <token>`.
@@ -169,9 +170,37 @@ Flutter app ──HTTPS + Bearer JWT──▶ API REST (Express, Node.js, puerto
 
 ---
 
+## Infraestructura de producción (MUY importante)
+
+- **EC2** (donde corre todo): `ubuntu@ip-172-31-14-46` en `~/sse`.
+- **Base de datos PostgreSQL → RDS** (NO es un contenedor Docker):
+  - Host: `sse-db.cytyo4006n0s.us-east-1.rds.amazonaws.com`
+  - Usuario: `sse_user` · Base: `sse_db` · Puerto: `5432`
+  - Credenciales env: `DB_USER=sse_user`, `DB_PASSWORD=sse_pass`, `DB_HOST=<rds-host>`, `DB_PORT=5432`
+  - ⚠️ **No hay contenedor `postgres`** en Docker Compose — la DB es RDS externa.
+- **Contenedores Docker en EC2:**
+  - `sse_backend` → API (Express/Node, puerto 3500).
+  - `sse_frontend` → web de verificación pública (`https://sse-sistema.com`).
+
+**Ejecutar una migración en producción (RDS):**
+1. SSH a la EC2:
+   ```bash
+   ssh -i <tu-key.pem> ubuntu@ip-172-31-14-46
+   ```
+2. Usar `psql` con el cliente de Postgres (instalar si falta: `sudo apt install -y postgresql-client-16`):
+   ```bash
+   PGPASSWORD=sse_pass psql -h sse-db.cytyo4006n0s.us-east-1.rds.amazonaws.com -U sse_user -d sse_db << 'EOF'
+   -- ...SQL...
+   EOF
+   ```
+
+**Reiniciar el backend tras cambios:** desde la EC2, `docker restart sse_backend`.
+
+---
+
 ## Desarrollo local
 
-- Backend local: en el monorepo, `docker compose up postgres backend` (puerto 3500) o `cd backend && npm run dev`.
+- Backend local: en el monorepo, `cd backend && npm run dev` (puerto 3500). Nota: la BD de desarrollo también puede apuntar a RDS vía las vars `DB_*`; no dependas de un contenedor `postgres` local.
 - Base URL según entorno:
   - Emulador Android: `http://10.0.2.2:3500`
   - Dispositivo físico: IP local del PC (ej. `http://192.168.0.28:3500`)
@@ -189,3 +218,15 @@ Flutter app ──HTTPS + Bearer JWT──▶ API REST (Express, Node.js, puerto
 - Validar `field_schema.required` y tipos (`numero` → `num.tryParse`, `fecha`/`hora` → pickers, `booleano` → switch, `seleccion` → dropdown de `options`).
 - Para subir foto: `image_picker` → `http.MultipartRequest` con campo `file` (`http.MultipartFile.fromBytes` o `fromPath`).
 - Imágenes de S3: la URL firmada caduca (1h) — no cachear la URL indefinidamente; si falla, re-solicitar el GET de adjuntos.
+
+---
+
+## Features de blockchain implementadas en la app
+
+- **Verificar integridad** → `GET /process/:id/verify` (admin/coord/auditor): pantalla por etapas comparando dbHash vs recomputado vs chain (`lib/providers/verify_provider.dart`, `lib/screens/verify_process_screen.dart`).
+- **Verificar sello** → `GET /process/:id/verify-seal` (admin/coord/auditor, proceso cerrado): checks BD/recalculado/chain + intact + TX de cierre + link Polygonscan (`lib/providers/seal_verify_provider.dart`, `lib/screens/verify_seal_screen.dart`).
+- **Trazabilidad en el detalle** → cada etapa confirmada muestra block con SHA-256 + TX hash + bloque al que se puede tocar para abrir `amoy.polygonscan.com/tx/<hash>` (`url_launcher`).
+- **Código QR** → tarjeta naranja en el detalle para admin/coord/auditor. El QR codifica `https://sse-sistema.com/verificar?codigo=<PROCESO>` (web público). Botón "Ver trazabilidad en la app" → `GET /public/process/:code` (sin login) (`lib/screens/traceability_qr_screen.dart`, `lib/screens/public_traceability_screen.dart`).
+- **Sellar proceso (manual)** → `POST /process/:id/close` (admin/coord, proceso activo y todas las etapas confirmadas). Confirmación + feedback + recarga (`lib/providers/seal_process_provider.dart`).
+- Dependencias añadidas: `fl_chart`, `url_launcher`, `qr_flutter`.
+- **Skeletons / estados vacíos** reutilizables: `lib/widgets/skeleton.dart` (`SkeletonBox`, `CardSkeleton`, `ListSkeleton`) y `lib/widgets/empty_state.dart` (`EmptyState`).

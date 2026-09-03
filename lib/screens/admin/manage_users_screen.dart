@@ -4,6 +4,7 @@ import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/models/user.dart';
 import 'package:sse_frontend_mobil/providers/auth_provider.dart';
 import 'package:sse_frontend_mobil/providers/users_provider.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 class ManageUsersScreen extends ConsumerWidget {
   const ManageUsersScreen({super.key});
@@ -26,8 +27,7 @@ class ManageUsersScreen extends ConsumerWidget {
         ],
       ),
       body: usersAsync.when(
-        loading: () => Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryDark)),
+        loading: () => const ListSkeleton(count: 5),
         error: (e, _) => Center(
           child: Padding(
             padding: EdgeInsets.all(32),
@@ -52,22 +52,21 @@ class ManageUsersScreen extends ConsumerWidget {
         ),
         data: (users) {
           if (users.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.people_outline_rounded,
-                      size: 64,
-                      color: AppTheme.textLight.withValues(alpha: 0.4)),
+                      size: 44, color: Color(0xFF94A3B8)),
                   SizedBox(height: 16),
                   Text('Sin usuarios',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textMuted)),
+                          color: Color(0xFF1E293B))),
                   SizedBox(height: 8),
                   Text('Crea el primer usuario con el boton +',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textLight)),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                 ],
               ),
             );
