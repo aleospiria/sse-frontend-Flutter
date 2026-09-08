@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:sse_frontend_mobil/config/app_theme.dart';
+import 'package:sse_frontend_mobil/models/field_def.dart' as models;
 import 'package:sse_frontend_mobil/models/step.dart' as models;
 import 'package:sse_frontend_mobil/models/step_record.dart' as models;
 import 'package:sse_frontend_mobil/models/user.dart';
@@ -596,10 +597,14 @@ class _StepCard extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
           ),
 
+          // Recorded data (field-by-field, human readable)
+          if (hasRecord && record.data.isNotEmpty)
+            _buildRecordData(step, record.data),
+
           // Blockchain data
           if (hasRecord && record.dataHash != null)
             _buildBlockchainInfo(context, record, isConfirmed,
-                record.txHash != null),
+                record.txHash != null, step.fieldSchema),
 
           // ── Action buttons (role-aware) ──
           if (!isClosed) ...[
@@ -698,11 +703,103 @@ class _StepCard extends ConsumerWidget {
     );
   }
 
+  Widget _buildRecordData(models.Step step, Map<String, dynamic> data) {
+    final fields = step.fieldSchema;
+    final children = <Widget>[];
+
+    // Section header
+    children.add(Row(children: [
+      const Icon(Icons.description_outlined,
+          size: 14, color: Color(0xFFF97316)),
+      const SizedBox(width: 4),
+      const Text('Datos del registro',
+          style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Container(height: 1, color: const Color(0xFFE2E8F0)),
+      ),
+    ]));
+    children.add(const SizedBox(height: 8));
+
+    // Render each known field first (schema order), then any extra keys.
+    final known = <String>{for (final f in fields) f.name};
+    final rows = <(String, String)>[];
+    for (final f in fields) {
+      if (data.containsKey(f.name)) {
+        rows.add((f.label, _formatValue(data[f.name])));
+      }
+    }
+    for (final e in data.entries) {
+      if (!known.contains(e.key)) {
+        rows.add((_prettyKey(e.key), _formatValue(e.value)));
+      }
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+      final (label, value) = rows[i];
+      children.add(Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        decoration: BoxDecoration(
+          color: i.isEven ? const Color(0xFFF8FAFC) : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569))),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 3,
+              child: Text(value,
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.35, color: Color(0xFF0F172A))),
+            ),
+          ],
+        ),
+      ));
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  String _formatValue(dynamic v) {
+    if (v == null || v == '') return '—';
+    if (v is bool) return v ? 'Sí' : 'No';
+    return v.toString();
+  }
+
+  String _prettyKey(String key) {
+    if (key.isEmpty) return key;
+    return key[0].toUpperCase() + key.substring(1).replaceAll('_', ' ');
+  }
+
   Widget _buildBlockchainInfo(
       BuildContext context,
       models.StepRecord record,
       bool isConfirmed,
-      bool hasTx) {
+      bool hasTx,
+      List<models.FieldDef> fieldSchema) {
     final bgColor =
         isConfirmed ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC);
     final borderColor = isConfirmed
@@ -783,6 +880,40 @@ class _StepCard extends ConsumerWidget {
                       fontSize: 10, color: Color(0xFFF59E0B))),
             ]),
           ],
+
+          // Plain-language caption so hashes are understood as proof
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(isConfirmed
+                    ? Icons.verified_user_outlined
+                    : Icons.fingerprint_rounded,
+                    size: 13,
+                    color: isConfirmed
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'Este código (hash) certifica que el registro de arriba es '
+                    'original e inmutable en blockchain. Nadie puede alterarlo.',
+                    style: TextStyle(
+                        fontSize: 10,
+                        height: 1.35,
+                        color: Color(0xFF475569)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

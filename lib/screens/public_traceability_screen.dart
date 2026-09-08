@@ -134,6 +134,37 @@ class PublicTraceabilityScreen extends ConsumerWidget {
           ]),
         ),
 
+        SizedBox(height: 12),
+
+        // ── Public traceability explainer banner ──
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Color(0xFFF0F9FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color(0xFFBAE6FD)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.shield_outlined, size: 20, color: Color(0xFF0369A1)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Cada etapa muestra aquí los resultados registrados y su '
+                  'evidencia. Esta certificación nunca incluye datos '
+                  'personales: protegemos siempre la identidad de las '
+                  'personas involucradas.',
+                  style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: Color(0xFF0C4A6E)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         SizedBox(height: 16),
         Text('Etapas del proceso',
             style: TextStyle(
@@ -167,34 +198,46 @@ class PublicTraceabilityScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hash global del sello',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textLight)),
+                Row(children: [
+                  Icon(Icons.verified_user_outlined,
+                      size: 16, color: Color(0xFF0369A1)),
+                  SizedBox(width: 6),
+                  Text('Forensic digital del proceso',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0C4A6E))),
+                ]),
                 SizedBox(height: 4),
+                Text(
+                  'Todo el historial quedó sellado e inmutable en blockchain. '
+                  'Esta huella global certifica que ninguna etapa fue alterada.',
+                  style: TextStyle(
+                      fontSize: 11, height: 1.35, color: Color(0xFF475569)),
+                ),
+                SizedBox(height: 8),
                 SelectableText(p.processHash!,
                     style: TextStyle(
                         fontSize: 10,
                         fontFamily: 'monospace',
-                        color: Color(0xFF64748B))),
+                        color: Color(0xFF475569))),
                 if (p.closeTxHash != null && p.closeBlock != null) ...[
                   SizedBox(height: 6),
                   InkWell(
                     onTap: () async {
                       final url = Uri.parse(
                           'https://amoy.polygonscan.com/tx/${p.closeTxHash}');
-                      await launchUrl(url);
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
                     },
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.open_in_new_rounded,
-                          size: 14, color: Color(0xFF2563EB)),
+                          size: 14, color: Color(0xFF0369A1)),
                       SizedBox(width: 4),
-                      Text('Bloque #${p.closeBlock} en Polygonscan',
+                      Text('Ver transacción · bloque #${p.closeBlock}',
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF2563EB))),
+                              color: Color(0xFF0369A1))),
                     ]),
                   ),
                 ],
@@ -236,6 +279,7 @@ class PublicTraceabilityScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header: number + name + status ──
           Row(children: [
             Container(
               width: 26,
@@ -245,7 +289,7 @@ class PublicTraceabilityScreen extends ConsumerWidget {
                 shape: BoxShape.circle,
                 color: confirmed ? Color(0xFF10B981) : Color(0xFFE2E8F0),
               ),
-              child: Text('${step.orderIndex}',
+              child: Text('${step.orderIndex + 1}',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -271,60 +315,232 @@ class PublicTraceabilityScreen extends ConsumerWidget {
             Text('Registrado por: ${step.recordedByName}',
                 style: TextStyle(fontSize: 11, color: AppTheme.textLight)),
           ],
-          if (step.dataHash != null) ...[
-            SizedBox(height: 8),
+
+          // ── Resultados (real recorded data) ──
+          if (step.results.isNotEmpty) ...[
+            SizedBox(height: 10),
+            Text('Resultados',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF334155))),
+            SizedBox(height: 6),
             Container(
-              padding: EdgeInsets.all(8),
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               decoration: BoxDecoration(
-                  color: confirmed ? Color(0xFFEFF6FF) : Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8)),
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < step.results.length; i++)
+                    _resultRow(step.results[i], i.isOdd),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Nota de privacidad ──
+          SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.lock_outline_rounded,
+                  size: 13, color: Color(0xFF94A3B8)),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Esta información nunca incluye datos personales — '
+                  'protegemos siempre la identidad de las personas '
+                  'involucradas.',
+                  style: TextStyle(
+                      fontSize: 11,
+                      height: 1.35,
+                      color: Color(0xFF64748B)),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Evidencia digital (attachments) ──
+          if (step.attachments.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text('Evidencia digital',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF334155))),
+            SizedBox(height: 6),
+            for (final att in step.attachments) _attachmentTile(att),
+          ],
+
+          // ── Blockchain proof (secondary) ──
+          if (step.dataHash != null || step.txHash != null) ...[
+            SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: confirmed ? Color(0xFFEFF6FF) : Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: confirmed
+                          ? Color(0xFFBFDBFE)
+                          : Color(0xFFFED7AA))),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Icon(
-                        confirmed
-                            ? Icons.verified_rounded
-                            : Icons.lock_outline_rounded,
-                        size: 13,
-                        color: confirmed
-                            ? Color(0xFF2563EB)
-                            : Color(0xFF94A3B8)),
-                    SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                          'SHA-256: ${step.dataHash!.substring(0, 18)}...',
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontFamily: 'monospace',
-                              color: Color(0xFF64748B))),
-                    ),
-                  ]),
-                  if (step.txHash != null) ...[
-                    SizedBox(height: 4),
-                    Row(children: [
-                      Icon(Icons.link_rounded,
-                          size: 13, color: Color(0xFF2563EB)),
-                      SizedBox(width: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                          confirmed
+                              ? Icons.verified_rounded
+                              : Icons.schedule_rounded,
+                          size: 15,
+                          color: confirmed
+                              ? Color(0xFF0369A1)
+                              : Color(0xFFEA580C)),
+                      SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'TX: ${step.txHash!.substring(0, 12)}...',
+                          confirmed
+                              ? 'Etapa certificada en blockchain'
+                              : 'Etapa registrada, confirmando en blockchain...',
                           style: TextStyle(
-                              fontSize: 10,
-                              fontFamily: 'monospace',
-                              color: Color(0xFF2563EB))),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: confirmed
+                                  ? Color(0xFF0C4A6E)
+                                  : Color(0xFF9A3412)),
+                        ),
                       ),
-                      if (step.blockNumber != null)
-                        Text('Blk #${step.blockNumber}',
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Los resultados y la evidencia de arriba quedaron '
+                    'sellados e inmutables. Nadie puede alterarlos.',
+                    style: TextStyle(
+                        fontSize: 11,
+                        height: 1.35,
+                        color: Color(0xFF475569)),
+                  ),
+                  if (step.dataHash != null) ...[
+                    SizedBox(height: 8),
+                    Text('Huella digital (hash):',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B))),
+                    SizedBox(height: 2),
+                    SelectableText('SHA-256 ${step.dataHash}',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                            color: Color(0xFF475569))),
+                  ],
+                  if (step.txHash != null) ...[
+                    SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final url = Uri.parse(
+                            'https://amoy.polygonscan.com/tx/${step.txHash}');
+                        await launchUrl(url,
+                            mode: LaunchMode.externalApplication);
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.open_in_new_rounded,
+                            size: 13, color: Color(0xFF0369A1)),
+                        SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Ver transacción en Polygonscan'
+                            '${step.blockNumber != null ? ' · bloque #${step.blockNumber}' : ''}',
                             style: TextStyle(
-                                fontSize: 10, color: Color(0xFF64748B))),
-                    ]),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0369A1)),
+                          ),
+                        ),
+                      ]),
+                    ),
                   ],
                 ],
               ),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _resultRow(PublicResult r, bool shaded) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        color: shaded ? Color(0xFFF1F5F9) : Colors.transparent,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(r.label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569))),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            flex: 6,
+            child: Text(_formatValue(r),
+                style: TextStyle(
+                    fontSize: 12,
+                    height: 1.3,
+                    color: Color(0xFF0F172A))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatValue(PublicResult r) {
+    final v = r.value;
+    if (v == null || v == '') return '—';
+    if (v is bool) return v ? 'Sí' : 'No';
+    return v.toString();
+  }
+
+  Widget _attachmentTile(PublicAttachment att) {
+    final fileName = att.originalName ?? att.id ?? 'Adjunto';
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: () async {
+          final url = att.url;
+          if (url == null) return;
+          await launchUrl(Uri.parse(url),
+              mode: LaunchMode.externalApplication);
+        },
+        borderRadius: BorderRadius.circular(6),
+        child: Row(children: [
+          Icon(Icons.attach_file_rounded, size: 16, color: Color(0xFF0369A1)),
+          SizedBox(width: 6),
+          Expanded(
+            child: Text(fileName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0369A1))),
+          ),
+          Icon(Icons.open_in_new_rounded, size: 14, color: Color(0xFF94A3B8)),
+        ]),
       ),
     );
   }
