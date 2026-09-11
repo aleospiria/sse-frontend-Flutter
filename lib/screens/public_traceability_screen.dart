@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:sse_frontend_mobil/config/app_theme.dart';
 import 'package:sse_frontend_mobil/models/public_process.dart';
 import 'package:sse_frontend_mobil/providers/public_process_provider.dart';
+import 'package:sse_frontend_mobil/widgets/empty_state.dart';
+import 'package:sse_frontend_mobil/widgets/skeleton.dart';
 
 class PublicTraceabilityScreen extends ConsumerWidget {
   final String code;
@@ -22,31 +24,13 @@ class PublicTraceabilityScreen extends ConsumerWidget {
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: dataAsync.when(
-        loading: () => Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryDark)),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.search_off_rounded,
-                  size: 48, color: Color(0xFFEF4444)),
-              SizedBox(height: 12),
-              Text('No se encontro el proceso "$code"',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppTheme.textDark)),
-              SizedBox(height: 4),
-              Text('$e',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight)),
-              SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(publicTraceabilityProvider(code)),
-                child: Text('Reintentar'),
-              ),
-            ]),
-          ),
+        loading: () => const _PublicTraceabilitySkeleton(),
+        error: (e, _) => EmptyState(
+          icon: Icons.search_off_rounded,
+          title: 'No se encontro el proceso "$code"',
+          message: '$e',
+          actionLabel: 'Reintentar',
+          onAction: () => ref.invalidate(publicTraceabilityProvider(code)),
         ),
         data: (data) => _buildContent(context, data),
       ),
@@ -542,6 +526,51 @@ class PublicTraceabilityScreen extends ConsumerWidget {
           Icon(Icons.open_in_new_rounded, size: 14, color: Color(0xFF94A3B8)),
         ]),
       ),
+    );
+  }
+}
+
+/// Esqueleto de carga de la trazabilidad pública: header, etapas y sello.
+class _PublicTraceabilitySkeleton extends StatelessWidget {
+  const _PublicTraceabilitySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Center(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonBox(width: 200, height: 16, radius: 6),
+              const SizedBox(height: 8),
+              const SkeletonBox(width: 140, height: 12, radius: 6),
+              const SizedBox(height: 20),
+              Row(children: [
+                const SkeletonBox(width: 24, height: 24, radius: 12),
+                const SizedBox(width: 10),
+                const Expanded(child: SkeletonBox(height: 15, radius: 6)),
+                const SizedBox(width: 10),
+                const SkeletonBox(width: 20, height: 20, radius: 6),
+              ]),
+              const SizedBox(height: 14),
+              const SkeletonBox(height: 46, radius: 8),
+              const SizedBox(height: 12),
+              const SkeletonBox(height: 46, radius: 8),
+              const SizedBox(height: 12),
+              const SkeletonBox(height: 46, radius: 8),
+              const SizedBox(height: 12),
+              const SkeletonBox(height: 46, radius: 8),
+              const SizedBox(height: 20),
+              const SkeletonBox(width: 160, height: 14, radius: 6),
+              const SizedBox(height: 10),
+              const SkeletonBox(height: 76, radius: 10),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
